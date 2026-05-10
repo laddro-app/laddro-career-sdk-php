@@ -16,4 +16,4 @@ jobs:
           php-version: "8.2"
 
       - run: composer install --no-interaction
-      - run: php -r "require 'vendor/autoload.php'; \$c = new Laddro\Career\Client('test'); echo 'OK';"
+      - run: php -r "require 'vendor/autoload.php'; \$c = new Laddro\Career\Laddro('test'); echo 'OK';"
