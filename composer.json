@@ -1,0 +1,17 @@
+{
+    "name": "laddro/career-sdk",
+    "description": "PHP SDK for the Laddro Career API",
+    "type": "library",
+    "license": "MIT",
+    "homepage": "https://developers.laddro.com",
+    "require": {
+        "php": ">=8.1",
+        "guzzlehttp/guzzle": "^7.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Laddro\\Career\\": "src/"
+        }
+    },
+    "keywords": ["laddro", "career", "resume", "api", "sdk"]
+}
