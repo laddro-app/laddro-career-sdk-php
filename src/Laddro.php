@@ -4,6 +4,7 @@ namespace Laddro\Career;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
+use Psr\Http\Message\ResponseInterface;
 
 class Laddro
 {
@@ -63,6 +64,11 @@ class Laddro
         return $this->postBinary('/v1/tailor', $request);
     }
 
+    public function tailorDetailed(array $request): array
+    {
+        return $this->postBinaryDetailed('/v1/tailor', $request);
+    }
+
     public function exportPdf(array $request): string
     {
         return $this->postBinary('/v1/export', $request);
@@ -86,6 +92,11 @@ class Laddro
     public function generateCoverLetter(array $request): string
     {
         return $this->postBinary('/v1/cover-letters/generate', $request);
+    }
+
+    public function generateCoverLetterDetailed(array $request): array
+    {
+        return $this->postBinaryDetailed('/v1/cover-letters/generate', $request);
     }
 
     public function renderCoverLetter(string $id, array $options): string
@@ -142,12 +153,20 @@ class Laddro
 
     private function postBinary(string $path, array $body): string
     {
+        return $this->postBinaryDetailed($path, $body)['data'];
+    }
+
+    private function postBinaryDetailed(string $path, array $body): array
+    {
         try {
             $response = $this->http->post($path, [
                 'headers' => $this->headers(),
                 'json' => $body,
             ]);
-            return $response->getBody()->getContents();
+            return [
+                'data' => $response->getBody()->getContents(),
+                'metadata' => $this->artifactMetadata($response),
+            ];
         } catch (ClientException $e) {
             throw $this->handleError($e);
         }
@@ -197,5 +216,34 @@ class Laddro
         $message = $body['error'] ?? $e->getMessage();
         $code = $body['code'] ?? null;
         return new LaddroException($message, $status, $code);
+    }
+
+    private function artifactMetadata(ResponseInterface $response): array
+    {
+        $contentType = $response->getHeaderLine('content-type');
+        return [
+            'resumeId' => $response->getHeaderLine('x-resume-id') ?: null,
+            'coverLetterId' => $response->getHeaderLine('x-cover-letter-id') ?: null,
+            'filename' => $this->contentDispositionFilename($response->getHeaderLine('content-disposition')),
+            'mimeType' => $contentType !== '' ? explode(';', $contentType)[0] : null,
+        ];
+    }
+
+    private function contentDispositionFilename(string $value): ?string
+    {
+        if ($value === '') {
+            return null;
+        }
+        foreach (explode(';', $value) as $part) {
+            $part = trim($part);
+            if (stripos($part, 'filename') !== 0 || strpos($part, '=') === false) {
+                continue;
+            }
+            [, $filename] = explode('=', $part, 2);
+            $filename = trim($filename, '"');
+            $filename = preg_replace("/^UTF-8''/", '', $filename);
+            return rawurldecode($filename);
+        }
+        return null;
     }
 }
